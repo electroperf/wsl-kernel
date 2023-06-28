@@ -502,7 +502,7 @@ config SECTION_MISMATCH_WARN_ONLY
 
 config DEBUG_FORCE_FUNCTION_ALIGN_64B
 	bool "Force all function address 64B aligned"
-	depends on EXPERT && (X86_64 || ARM64 || PPC32 || PPC64 || ARC)
+	depends on EXPERT && (X86_64 || ARM64 || PPC32 || PPC64 || ARC || S390)
 	select FUNCTION_ALIGNMENT_64B
 	help
 	  There are cases that a commit from one domain changes the function
@@ -788,6 +788,16 @@ config DEBUG_VM
 	help
 	  Enable this to turn on extended checks in the virtual-memory system
 	  that may impact performance.
+
+	  If unsure, say N.
+
+config DEBUG_VM_SHOOT_LAZIES
+	bool "Debug MMU_LAZY_TLB_SHOOTDOWN implementation"
+	depends on DEBUG_VM
+	depends on MMU_LAZY_TLB_SHOOTDOWN
+	help
+	  Enable additional IPIs that ensure lazy tlb mm references are removed
+	  before the mm is freed.
 
 	  If unsure, say N.
 
@@ -1124,6 +1134,19 @@ config WQ_WATCHDOG
 	  state.  This can be configured through kernel parameter
 	  "workqueue.watchdog_thresh" and its sysfs counterpart.
 
+config WQ_CPU_INTENSIVE_REPORT
+	bool "Report per-cpu work items which hog CPU for too long"
+	depends on DEBUG_KERNEL
+	help
+	  Say Y here to enable reporting of concurrency-managed per-cpu work
+	  items that hog CPUs for longer than
+	  workqueue.cpu_intensive_threshold_us. Workqueue automatically
+	  detects and excludes them from concurrency management to prevent
+	  them from stalling other per-cpu work items. Occassional
+	  triggering may not necessarily indicate a problem. Repeated
+	  triggering likely indicates that the work item should be switched
+	  to use an unbound workqueue.
+
 config TEST_LOCKUP
 	tristate "Test module to generate lockups"
 	depends on m
@@ -1143,7 +1166,7 @@ menu "Scheduler Debugging"
 
 config SCHED_DEBUG
 	bool "Collect scheduler debugging info"
-	depends on DEBUG_KERNEL && PROC_FS
+	depends on DEBUG_KERNEL && DEBUG_FS
 	default y
 	help
 	  If you say Y here, the /sys/kernel/debug/sched file will be provided
@@ -1392,7 +1415,7 @@ config LOCKDEP_STACK_TRACE_HASH_BITS
 	range 10 30
 	default 14
 	help
-	  Try increasing this value if you need large MAX_STACK_TRACE_ENTRIES.
+	  Try increasing this value if you need large STACK_TRACE_HASH_SIZE.
 
 config LOCKDEP_CIRCULAR_QUEUE_BITS
 	int "Bitsize for elements in circular_queue struct"
@@ -1479,6 +1502,15 @@ config CSD_LOCK_WAIT_DEBUG
 	  to the smp_call_function*() IPI wrappers.  These debug prints
 	  include the IPI handler function currently executing (if any)
 	  and relevant stack traces.
+
+config CSD_LOCK_WAIT_DEBUG_DEFAULT
+	bool "Default csd_lock_wait() debugging on at boot time"
+	depends on CSD_LOCK_WAIT_DEBUG
+	depends on 64BIT
+	default n
+	help
+	  This option causes the csdlock_debug= kernel boot parameter to
+	  default to 1 (basic debugging) instead of 0 (no debugging).
 
 endmenu # lock debugging
 
@@ -1958,9 +1990,21 @@ config FAIL_SUNRPC
 	  Provide fault-injection capability for SunRPC and
 	  its consumers.
 
+config FAULT_INJECTION_CONFIGFS
+	bool "Configfs interface for fault-injection capabilities"
+	depends on FAULT_INJECTION
+	select CONFIGFS_FS
+	help
+	  This option allows configfs-based drivers to dynamically configure
+	  fault-injection via configfs.  Each parameter for driver-specific
+	  fault-injection can be made visible as a configfs attribute in a
+	  configfs group.
+
+
 config FAULT_INJECTION_STACKTRACE_FILTER
 	bool "stacktrace filter for fault-injection capabilities"
-	depends on FAULT_INJECTION_DEBUG_FS && STACKTRACE_SUPPORT
+	depends on FAULT_INJECTION
+	depends on (FAULT_INJECTION_DEBUG_FS || FAULT_INJECTION_CONFIGFS) && STACKTRACE_SUPPORT
 	select STACKTRACE
 	depends on FRAME_POINTER || MIPS || PPC || S390 || MICROBLAZE || ARM || ARC || X86
 	help
@@ -2422,6 +2466,23 @@ config BITFIELD_KUNIT
 
 	  If unsure, say N.
 
+config CHECKSUM_KUNIT
+	tristate "KUnit test checksum functions at runtime" if !KUNIT_ALL_TESTS
+	depends on KUNIT
+	default KUNIT_ALL_TESTS
+	help
+	  Enable this option to test the checksum functions at boot.
+
+	  KUnit tests run during boot and output the results to the debug log
+	  in TAP format (http://testanything.org/). Only useful for kernel devs
+	  running the KUnit test harness, and not intended for inclusion into a
+	  production build.
+
+	  For more information on KUnit and unit tests in general please refer
+	  to the KUnit documentation in Documentation/dev-tools/kunit/.
+
+	  If unsure, say N.
+
 config HASH_KUNIT_TEST
 	tristate "KUnit Test for integer hash functions" if !KUNIT_ALL_TESTS
 	depends on KUNIT
@@ -2614,7 +2675,7 @@ config STACKINIT_KUNIT_TEST
 
 config FORTIFY_KUNIT_TEST
 	tristate "Test fortified str*() and mem*() function internals at runtime" if !KUNIT_ALL_TESTS
-	depends on KUNIT && FORTIFY_SOURCE
+	depends on KUNIT
 	default KUNIT_ALL_TESTS
 	help
 	  Builds unit tests for checking internals of FORTIFY_SOURCE as used
@@ -2630,6 +2691,11 @@ config HW_BREAKPOINT_KUNIT_TEST
 	  Tests for hw_breakpoint constraints accounting.
 
 	  If unsure, say N.
+
+config STRCAT_KUNIT_TEST
+	tristate "Test strcat() family of functions at runtime" if !KUNIT_ALL_TESTS
+	depends on KUNIT
+	default KUNIT_ALL_TESTS
 
 config STRSCPY_KUNIT_TEST
 	tristate "Test strscpy*() family of functions at runtime" if !KUNIT_ALL_TESTS

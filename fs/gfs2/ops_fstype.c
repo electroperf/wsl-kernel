@@ -254,7 +254,7 @@ static int gfs2_read_super(struct gfs2_sbd *sdp, sector_t sector, int silent)
 
 	bio = bio_alloc(sb->s_bdev, 1, REQ_OP_READ | REQ_META, GFP_NOFS);
 	bio->bi_iter.bi_sector = sector * (sb->s_blocksize >> 9);
-	bio_add_page(bio, page, PAGE_SIZE, 0);
+	__bio_add_page(bio, page, PAGE_SIZE, 0);
 
 	bio->bi_end_io = end_bio_io_page;
 	bio->bi_private = page;
@@ -734,13 +734,11 @@ static int init_journal(struct gfs2_sbd *sdp, int undo)
 	struct inode *master = d_inode(sdp->sd_master_dir);
 	struct gfs2_holder ji_gh;
 	struct gfs2_inode *ip;
-	int jindex = 1;
 	int error = 0;
 
-	if (undo) {
-		jindex = 0;
+	gfs2_holder_mark_uninitialized(&ji_gh);
+	if (undo)
 		goto fail_statfs;
-	}
 
 	sdp->sd_jindex = gfs2_lookup_simple(master, "jindex");
 	if (IS_ERR(sdp->sd_jindex)) {
@@ -852,7 +850,6 @@ static int init_journal(struct gfs2_sbd *sdp, int undo)
 	sdp->sd_log_idle = 1;
 	set_bit(SDF_JOURNAL_CHECKED, &sdp->sd_flags);
 	gfs2_glock_dq_uninit(&ji_gh);
-	jindex = 0;
 	INIT_WORK(&sdp->sd_freeze_work, gfs2_freeze_func);
 	return 0;
 
@@ -869,7 +866,7 @@ fail_journal_gh:
 		gfs2_glock_dq_uninit(&sdp->sd_journal_gh);
 fail_jindex:
 	gfs2_jindex_free(sdp);
-	if (jindex)
+	if (gfs2_holder_initialized(&ji_gh))
 		gfs2_glock_dq_uninit(&ji_gh);
 fail:
 	iput(sdp->sd_jindex);

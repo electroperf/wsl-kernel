@@ -136,7 +136,7 @@ static int __try_to_reclaim_swap(struct swap_info_struct *si,
 	int ret = 0;
 
 	folio = filemap_get_folio(swap_address_space(entry), offset);
-	if (!folio)
+	if (IS_ERR(folio))
 		return 0;
 	/*
 	 * When this function is called from scan_swap_map_slots() and it's
@@ -679,6 +679,7 @@ static void __del_from_avail_list(struct swap_info_struct *p)
 {
 	int nid;
 
+	assert_spin_locked(&p->lock);
 	for_each_node(nid)
 		plist_del(&p->avail_lists[nid], &swap_avail_heads[nid]);
 }
@@ -2095,7 +2096,7 @@ retry:
 
 		entry = swp_entry(type, i);
 		folio = filemap_get_folio(swap_address_space(entry), i);
-		if (!folio)
+		if (IS_ERR(folio))
 			continue;
 
 		/*
@@ -2434,8 +2435,8 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
 		spin_unlock(&swap_lock);
 		goto out_dput;
 	}
-	del_from_avail_list(p);
 	spin_lock(&p->lock);
+	del_from_avail_list(p);
 	if (p->prio < 0) {
 		struct swap_info_struct *si = p;
 		int nid;
@@ -2538,7 +2539,7 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
 		struct block_device *bdev = I_BDEV(inode);
 
 		set_blocksize(bdev, old_block_size);
-		blkdev_put(bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
+		blkdev_put(bdev, p);
 	}
 
 	inode_lock(inode);
@@ -2769,7 +2770,7 @@ static int claim_swapfile(struct swap_info_struct *p, struct inode *inode)
 
 	if (S_ISBLK(inode->i_mode)) {
 		p->bdev = blkdev_get_by_dev(inode->i_rdev,
-				   FMODE_READ | FMODE_WRITE | FMODE_EXCL, p);
+				BLK_OPEN_READ | BLK_OPEN_WRITE, p, NULL);
 		if (IS_ERR(p->bdev)) {
 			error = PTR_ERR(p->bdev);
 			p->bdev = NULL;
@@ -3220,7 +3221,7 @@ bad_swap:
 	p->cluster_next_cpu = NULL;
 	if (inode && S_ISBLK(inode->i_mode) && p->bdev) {
 		set_blocksize(p->bdev, p->old_block_size);
-		blkdev_put(p->bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
+		blkdev_put(p->bdev, p);
 	}
 	inode = NULL;
 	destroy_swap_extents(p);
@@ -3635,12 +3636,12 @@ static void free_swap_count_continuations(struct swap_info_struct *si)
 }
 
 #if defined(CONFIG_MEMCG) && defined(CONFIG_BLK_CGROUP)
-void __cgroup_throttle_swaprate(struct page *page, gfp_t gfp_mask)
+void __folio_throttle_swaprate(struct folio *folio, gfp_t gfp)
 {
 	struct swap_info_struct *si, *next;
-	int nid = page_to_nid(page);
+	int nid = folio_nid(folio);
 
-	if (!(gfp_mask & __GFP_IO))
+	if (!(gfp & __GFP_IO))
 		return;
 
 	if (!blk_cgroup_congested())

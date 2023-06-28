@@ -1419,7 +1419,7 @@ out:
 
 static inline unsigned long fuse_get_user_addr(const struct iov_iter *ii)
 {
-	return (unsigned long)ii->iov->iov_base + ii->iov_offset;
+	return (unsigned long)iter_iov(ii)->iov_base + ii->iov_offset;
 }
 
 static inline size_t fuse_get_frag_size(const struct iov_iter *ii,
@@ -3252,7 +3252,7 @@ static const struct file_operations fuse_file_operations = {
 	.lock		= fuse_file_lock,
 	.get_unmapped_area = thp_get_unmapped_area,
 	.flock		= fuse_file_flock,
-	.splice_read	= generic_file_splice_read,
+	.splice_read	= filemap_splice_read,
 	.splice_write	= iter_file_splice_write,
 	.unlocked_ioctl	= fuse_file_ioctl,
 	.compat_ioctl	= fuse_file_compat_ioctl,

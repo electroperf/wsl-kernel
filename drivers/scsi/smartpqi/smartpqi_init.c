@@ -5015,7 +5015,7 @@ static int pqi_create_queues(struct pqi_ctrl_info *ctrl_info)
 }
 
 #define PQI_REPORT_EVENT_CONFIG_BUFFER_LENGTH	\
-	struct_size((struct pqi_event_config *)0, descriptors, PQI_MAX_EVENT_DESCRIPTORS)
+	struct_size_t(struct pqi_event_config,  descriptors, PQI_MAX_EVENT_DESCRIPTORS)
 
 static int pqi_configure_events(struct pqi_ctrl_info *ctrl_info,
 	bool enable_events)
@@ -7403,7 +7403,7 @@ static struct attribute *pqi_sdev_attrs[] = {
 
 ATTRIBUTE_GROUPS(pqi_sdev);
 
-static struct scsi_host_template pqi_driver_template = {
+static const struct scsi_host_template pqi_driver_template = {
 	.module = THIS_MODULE,
 	.name = DRIVER_NAME_SHORT,
 	.proc_name = DRIVER_NAME_SHORT,

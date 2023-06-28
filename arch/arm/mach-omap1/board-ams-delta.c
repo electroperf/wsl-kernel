@@ -822,8 +822,6 @@ static int __init modem_nreset_init(void)
  */
 static int __init ams_delta_modem_init(void)
 {
-	int err;
-
 	if (!machine_is_ams_delta())
 		return -ENODEV;
 
@@ -832,9 +830,7 @@ static int __init ams_delta_modem_init(void)
 	/* Initialize the modem_nreset regulator consumer before use */
 	modem_priv.regulator = ERR_PTR(-ENODEV);
 
-	err = platform_device_register(&ams_delta_modem_device);
-
-	return err;
+	return platform_device_register(&ams_delta_modem_device);
 }
 arch_initcall_sync(ams_delta_modem_init);
 
@@ -881,7 +877,6 @@ MACHINE_START(AMS_DELTA, "Amstrad E3 (Delta)")
 	.map_io		= ams_delta_map_io,
 	.init_early	= omap1_init_early,
 	.init_irq	= omap1_init_irq,
-	.handle_irq	= omap1_handle_irq,
 	.init_machine	= ams_delta_init,
 	.init_late	= ams_delta_init_late,
 	.init_time	= omap1_timer_init,

@@ -30,14 +30,14 @@ jobs:
     - name: Build Kernel
       run: |
         git config --global --add safe.directory /__w/wsl-kernel/wsl-kernel
-        export KBUILD_BUILD_USER="mvaisakh"
-        export KBUILD_BUILD_HOST="statixos"
+        export KBUILD_BUILD_USER="kunmun"
+        export KBUILD_BUILD_HOST="AtomXDevs"
         make -j$(nproc --all)
-        echo "kversion=$(strings arch/x86_64/boot/bzImage | grep mvaisakh | grep gcc)" >> $GITHUB_ENV
+        echo "kversion=$(strings arch/x86_64/boot/bzImage | grep kunmun | grep gcc)" >> $GITHUB_ENV
         cp arch/x86_64/boot/bzImage releases/bzImage
     - name: Checkout to RT
       run: |
-        git fetch https://github.com/mvaisakh/wsl-kernel wsl-rt
+        git fetch https://github.com/ElectroPerf/wsl-kernel wsl-rt
         git checkout FETCH_HEAD
     - name: Clean
       run: make clean && make mrproper
@@ -46,10 +46,10 @@ jobs:
     - name: Build Kernel
       run: |
         git config --global --add safe.directory /__w/wsl-kernel/wsl-kernel
-        export KBUILD_BUILD_USER="mvaisakh"
-        export KBUILD_BUILD_HOST="statixos"
+        export KBUILD_BUILD_USER="kunmun"
+        export KBUILD_BUILD_HOST="AtomXDevs"
         make -j$(nproc --all)
-        echo "kversion-rt=$(strings arch/x86_64/boot/bzImage | grep mvaisakh | grep gcc)" >> $GITHUB_ENV
+        echo "kversion-rt=$(strings arch/x86_64/boot/bzImage | grep kunmun | grep gcc)" >> $GITHUB_ENV
         cp arch/x86_64/boot/bzImage releases/bzImage-rt
     - name: Create Release
       run: |

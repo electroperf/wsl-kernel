@@ -35,25 +35,9 @@ jobs:
         make -j$(nproc --all)
         echo "kversion=$(strings arch/x86_64/boot/bzImage | grep kunmun | grep gcc)" >> $GITHUB_ENV
         cp arch/x86_64/boot/bzImage releases/bzImage
-    - name: Checkout to RT
-      run: |
-        git fetch https://github.com/ElectroPerf/wsl-kernel wsl-rt
-        git checkout FETCH_HEAD
-    - name: Clean
-      run: make clean && make mrproper
-    - name: Configure
-      run: make wsl_defconfig
-    - name: Build Kernel
-      run: |
-        git config --global --add safe.directory /__w/wsl-kernel/wsl-kernel
-        export KBUILD_BUILD_USER="kunmun"
-        export KBUILD_BUILD_HOST="AtomXDevs"
-        make -j$(nproc --all)
-        echo "kversion-rt=$(strings arch/x86_64/boot/bzImage | grep kunmun | grep gcc)" >> $GITHUB_ENV
-        cp arch/x86_64/boot/bzImage releases/bzImage-rt
     - name: Create Release
       run: |
-        gh release create ${{ env.date }} 'releases/bzImage#kernel' 'releases/bzImage-rt#kernel-rt' --notes "Version String: ${{ env.kversion }} \n Version String RT: ${{ env.kversion-rt }}" --generate-notes -t "Eva Kernel for WSL Release ${{ env.date }}"
+        gh release create ${{ env.date }} 'releases/bzImage#kernel' --notes "Version String: ${{ env.kversion }}" --generate-notes -t "Eva Kernel for WSL Release ${{ env.date }}"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
